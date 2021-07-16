@@ -1,0 +1,14 @@
+com/github/annasajkh/Snake.java
+ com.github.annasajkh.Snake
+com/github/annasajkh/Tail.java
+ com.github.annasajkh.Tail
+com/github/annasajkh/Matrix.java
+ com.github.annasajkh.Matrix
+com/github/annasajkh/NeuralNetwork.java
+ com.github.annasajkh.NeuralNetwork
+com/github/annasajkh/Food.java
+ com.github.annasajkh.Food
+com/github/annasajkh/Game.java
+ com.github.annasajkh.Game
+com/github/annasajkh/Line.java
+ com.github.annasajkh.Line
