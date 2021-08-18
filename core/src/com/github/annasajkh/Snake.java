@@ -8,7 +8,7 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
 
-public class Snake
+public class Snake implements Comparable<Snake>
 {
     double score = 0;
     int attempt = 0;
@@ -20,25 +20,20 @@ public class Snake
     Color color;
     NeuralNetwork brain;
     Food food;
-    float colorHue;
-    boolean forward;
 
     public Snake()
     {
-        this(new NeuralNetwork(Game.inputSize, 20, 4, 2));
+        this(new NeuralNetwork(Game.inputSize, 12, 4, 1));
     }
 
     public Snake(NeuralNetwork brain)
     {
         this.position = new Vector2(Game.collums / 2 * Game.scale, Game.rows / 2 * Game.scale);
-        colorHue = 0.2f;
-        forward = true;
         this.brain = brain;
         tails = new ArrayList<>();
-        tails.add(new Tail(position, colorHue, forward));
-        color = Game.hsvToRgba(colorHue, 1, 1, 1);
+        tails.add(new Tail(position));
+        color = Color.RED;
         dir = new Vector2(Game.scale, 0);
-        colorHue += 0.01f;
         food = new Food(this);
 
     }
@@ -77,9 +72,7 @@ public class Snake
         								,tail.position.x +Game.scale, tail.position.y + Game.scale);
         }
 
-
-        double[] input = new double[Game.inputSize];
-        List<Float> inputTemp = new ArrayList<>(Game.inputSize);
+        List<Float> input = new ArrayList<>(Game.inputSize);
 
         for (int i = 0; i < visions.length; i++)
         {
@@ -97,11 +90,11 @@ public class Snake
             }
             if(visions[i].pointB != null)
             {
-                inputTemp.add(visions[i].length2() / Game.maxVisionLength2);
+                input.add(visions[i].length() * 0.0001f);
             }
             else
             {
-                inputTemp.add(1f);
+                input.add(1f);
             }
 
 
@@ -116,11 +109,11 @@ public class Snake
 
             if(visions[i].pointB != null)
             {
-                inputTemp.add(visions[i].length2() / Game.maxVisionLength2);
+                input.add(visions[i].length() * 0.0001f);
             }
             else
             {
-                inputTemp.add(0f);
+                input.add(0.5f);
             }
 
             for (int j = 0; j < tails.size(); j++)
@@ -137,11 +130,11 @@ public class Snake
 
             if(visions[i].pointB != null)
             {
-                inputTemp.add(visions[i].length2() / Game.maxVisionLength2);
+                input.add(visions[i].length() * 0.0001f);
             }
             else
             {
-                inputTemp.add(1f);
+                input.add(1f);
             }
         }
 
@@ -154,59 +147,60 @@ public class Snake
                 return;
             }
         }
+        
 
         if (position.x >= Gdx.graphics.getWidth())
         {
             die = true;
+            score -= 1000;
             return;
         }
         else if (position.x < 0)
         {
             die = true;
+            score -= 1000;
             return;
         }
         else if (position.y >= Gdx.graphics.getHeight())
         {
             die = true;
+            score -= 1000;
             return;
         }
         else if (position.y < 0)
         {
             die = true;
+            score -= 1000;
             return;
         }
 
-        if (attempt >= Game.rows * Game.collums)
+        if (attempt >= Game.maxAttempts)
         {
             die = true;
             return;
         }
 
-        for (int i = 0; i < input.length; i++)
-        {
-            input[i] = inputTemp.get(i);
-        }
-        inputTemp = null;
 
-        double[] result = brain.process(input);
+        float[] result = brain.process(input.toArray(new Float[0]));
 
-        if (result[0] > 0.5)
+        if (result[0] > 0.5f)
         {
             right();
         }
-        else if (result[1] > 0.5)
+        else if (result[1] > 0.5f)
         {
             left();
         }
-        else if (result[2] > 0.5)
+        else if (result[2] > 0.5f)
         {
             up();
         }
-        else if (result[3] > 0.5)
+        else if (result[3] > 0.5f)
         {
             down();
         }
         attempt++;
+        score += 1;
     }
 
     public void right()
@@ -276,5 +270,12 @@ public class Snake
     public float getY()
     {
         return position.y;
+    }
+
+    @Override
+    public int compareTo(Snake other)
+    {
+        return Double.compare(score, other.score);
+
     }
 }

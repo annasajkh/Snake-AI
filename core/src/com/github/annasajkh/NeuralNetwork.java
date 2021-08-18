@@ -1,5 +1,10 @@
 package com.github.annasajkh;
 
+import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+
 public class NeuralNetwork
 {
     private Matrix[] network;
@@ -7,37 +12,54 @@ public class NeuralNetwork
     private Matrix[] biases;
     private int inputSize;
     private int hiddenLayerSize;
-    private int layerCount;
     private int outputSize;
-    private double[] expectedOutput;
-    private double learningRate = 0.01;
+    private float[] expectedOutput;
+    private float learningRate = 0.01f;
+    private int hiddenLayerCount;
 
-    private static Matrix sigmoid(Matrix matrix)
+    private static void sigmoid(Matrix matrix)
     {
-        Matrix m = matrix.clone();
-        for (int i = 0; i < m.rows; i++)
+        for(int i = 0; i < matrix.rows; i++)
         {
-            for (int j = 0; j < m.cols; j++)
+            for(int j = 0; j < matrix.cols; j++)
             {
-                m.array[i][j] =  1.0 / (1.0 + Math.exp(-m.array[i][j]));
+                matrix.array[i][j] = 1.0f / (1.0f + (float) (Math.exp(-matrix.array[i][j])));
             }
         }
-        return m;
     }
 
-    private static Matrix dsigmoid(Matrix matrix)
+    private static void dsigmoid(Matrix matrix)
     {
-        Matrix m = matrix.clone();
-
-        for (int i = 0; i <  m.rows; i++)
+        for(int i = 0; i < matrix.rows; i++)
         {
-            for (int j = 0; j < m.cols; j++)
+            for(int j = 0; j < matrix.cols; j++)
             {
-                double value = m.array[i][j];
-                m.array[i][j] =  value * (1 - value);
+                float value = matrix.array[i][j];
+                matrix.array[i][j] = value * (1 - value);
             }
         }
-        return m;
+    }
+
+    private static void leakyRelu(Matrix matrix)
+    {
+        for(int i = 0; i < matrix.rows; i++)
+        {
+            for(int j = 0; j < matrix.cols; j++)
+            {
+                matrix.array[i][j] = matrix.array[i][j] >= 0 ? matrix.array[i][j] : 0.01f * matrix.array[i][j];
+            }
+        }
+    }
+
+    private static void dleakyRelu(Matrix matrix)
+    {
+        for(int i = 0; i < matrix.rows; i++)
+        {
+            for(int j = 0; j < matrix.cols; j++)
+            {
+                matrix.array[i][j] = matrix.array[i][j] >= 0 ? 1 : 0.01f;
+            }
+        }
     }
 
     public NeuralNetwork(int inputSize, int hiddenLayerSize, int outputSize)
@@ -45,71 +67,69 @@ public class NeuralNetwork
         this(inputSize, hiddenLayerSize, outputSize, 1);
     }
 
-
-    public NeuralNetwork(int inputSize, int hiddenLayerSize, int outputSize, int layerCount)
+    public NeuralNetwork(int inputSize, int hiddenLayerSize, int outputSize, int hiddenLayerCount)
     {
-        //make new array of matrix
-        weights = new Matrix[1 + layerCount];
-        biases = new Matrix[1 + layerCount];
+        // make weights and biases
+        weights = new Matrix[1 + hiddenLayerCount];
+        biases = new Matrix[1 + hiddenLayerCount];
+
         this.inputSize = inputSize;
         this.hiddenLayerSize = hiddenLayerSize;
-        this.layerCount = layerCount;
+        this.hiddenLayerCount = hiddenLayerCount;
         this.outputSize = outputSize;
 
-        //make layers of hidden layer as many as the layer count
-        Matrix hiddenLayers = new Matrix(1,hiddenLayerSize);
+        // make the network with size of input + hiddenLayerCount + output
+        network = new Matrix[hiddenLayerCount + 2];
 
-        //make the network with size of input + layerCount + output
-        network = new Matrix[layerCount + 2];
+        // make network index 0 the size of input cuz it's a input layer
+        network[0] = new Matrix(inputSize, 1);
 
-        //make network index 0 the size of input cuz it's a input layer
-        network[0] = new Matrix(1,inputSize);
-
-        //fill network index 1 - ? with the hidden layer
-        for (int i = 1; i < network.length - 1; i++)
+        // fill network index 1 - ? with the hidden layer
+        for(int i = 1; i < network.length - 1; i++)
         {
-            network[i] = hiddenLayers;
+            network[i] = new Matrix(hiddenLayerSize, 1);
         }
 
-        //make network index last the size of output cuz it's a output layer
-        network[network.length - 1] = new Matrix(1,outputSize);
+        // make network index last the size of output cuz it's a output layer
+        network[network.length - 1] = new Matrix(outputSize, 1);
 
-        for (int i = 1; i < network.length; i++)
+        for(int i = 1; i < network.length; i++)
         {
 
             Matrix weight;
             Matrix bias;
 
-            //make this if it's a hidden layer
-            if (i > 1 && i != network.length - 1)
+            // make this if it's a hidden layer
+            if(i > 1 && i != network.length - 1)
             {
-                //weight from hidden to hidden
+                // weight from hidden to hidden
                 weight = new Matrix(hiddenLayerSize, hiddenLayerSize);
             }
             else
             {
-                //make this is it's a output layer
-                if (i == network.length - 1)
+                // make this is it's a output layer
+                if(i == network.length - 1)
                 {
-                    //weight from hidden to output
+                    // weight from hidden to output
                     weight = new Matrix(outputSize, hiddenLayerSize);
                 }
-                //make this is it's a input layer
+                // make this is it's a input layer
                 else
                 {
-                    //weight from input to hidden
+                    // weight from input to hidden
                     weight = new Matrix(hiddenLayerSize, inputSize);
                 }
             }
 
-            //fill the matrix with random values
+            // fill the matrix with random values
             weight.randomize();
 
-            //set weight array to matrix
+            // set weight array to matrix
             weights[i - 1] = weight;
 
-            //if is not output layer make new matrix size of hidden layer else make new matrix size of output layer
-            if (i != network.length - 1)
+            // if is not output layer make new matrix size of hidden layer else make new
+            // matrix size of output layer
+            if(i != network.length - 1)
             {
                 bias = new Matrix(hiddenLayerSize, 1);
             }
@@ -118,15 +138,13 @@ public class NeuralNetwork
                 bias = new Matrix(outputSize, 1);
             }
 
-            //randomize bias and set it to biases
-            bias.randomize();
+            // randomize bias and set it to biases
             biases[i - 1] = bias;
         }
 
-
     }
 
-    public void setLearningRate(double learningRate)
+    public void setLearningRate(float learningRate)
     {
         this.learningRate = learningRate;
     }
@@ -134,48 +152,55 @@ public class NeuralNetwork
     private void preprocess(int i, boolean train)
     {
 
-        //matrix multiplacation between weight and before layer
+        // matrix multiplacation between weight and before layer
         Matrix results = Matrix.multiply(weights[i - 1], network[i - 1]);
 
-        //add biasses
+        // add biasses
         results.add(biases[i - 1]);
 
-        //map it to activation function
-        results = sigmoid(results);
+        if(i == network.length - 1)
+        {
+            sigmoid(results);
+        }
+        else
+        {
+            leakyRelu(results);
+        }
 
-        //set current layer to the result
+        // set current layer to the result
         network[i] = results;
 
-        //if the current layer is the output and it's training then do the backpropagation
-        if (i == network.length - 1 && train)
+        // if the current layer is the output and it's training then do the
+        // backpropagation
+        if(i == network.length - 1 && train)
         {
             backpropagation(results);
         }
     }
 
-    public double[] process(double[] input)
+    public float[] process(Float[] input)
     {
-        //pass input to input layer
-        network[0] = new Matrix(input);
+        // pass input to input layer
+        network[0].fill(input);
 
-        //feed forward the input from layer 1 so it can get layer 0
-        for (int i = 1; i < network.length; i++)
+        // feed forward the input from layer 1 so it can get layer 0
+        for(int i = 1; i < network.length; i++)
         {
             preprocess(i, false);
         }
 
-        //return the last layer aka the output
+        // return the last layer aka the output
         return network[network.length - 1].toArray();
     }
 
     private Matrix[] getAllErrors(Matrix error)
     {
-        //make array of matrix and set last index = error
+        // make array of matrix and set last index = error
         Matrix[] errors = new Matrix[weights.length];
         errors[errors.length - 1] = error;
 
-        //calculate error on index i and pass it on index before it
-        for (int i = errors.length - 1; i >= 1; i--)
+        // calculate error on index i and pass it on index before it
+        for(int i = errors.length - 1; i >= 1; i--)
         {
             errors[i - 1] = Matrix.multiply(Matrix.transpose(weights[i]), errors[i]);
         }
@@ -183,58 +208,63 @@ public class NeuralNetwork
         return errors;
     }
 
-
     private void changingWeightsAndBiases(int index, Matrix errors, Matrix layer, Matrix afterLayer)
     {
 
-        //calculate gradient and map it to activation function
-        Matrix gradient = null;
+        Matrix layerTemp = layer.clone();
 
-        //map it to activation function
-        gradient = dsigmoid(layer);
-        //multiply it by errors and learning rate
-        gradient.scale(errors);
-        gradient.scale(learningRate);
+        if(index == network.length - 2)
+        {
+            dsigmoid(layerTemp);
+        }
+        else
+        {
+            dleakyRelu(layerTemp);
+        }
 
-        //deltaWeight = gradient multiply afterLayer transposted
-        Matrix deltaWeight = Matrix.multiply(gradient, Matrix.transpose(afterLayer));
+        // multiply it by errors and learning rate
+        layerTemp.scale(errors);
+        layerTemp.scale(learningRate);
 
-        //adjust the weight by deltaWeight
+        // deltaWeight = gradient multiply afterLayer transposted
+        Matrix deltaWeight = Matrix.multiply(layerTemp, Matrix.transpose(afterLayer));
+
+        // adjust the weight by deltaWeight
         weights[index].add(deltaWeight);
 
-        //adjust the bias by it's delta (it's just the gradient)
-        biases[index].add(gradient);
+        // adjust the bias by it's delta (it's just the gradient)
+        biases[index].add(layerTemp);
 
     }
 
     private void backpropagation(Matrix output)
     {
 
-        //calculate output error
+        // calculate output error
         Matrix error = new Matrix(expectedOutput);
         error.sub(output);
 
-        //get all errors
+        // get all errors
         Matrix[] errors = getAllErrors(error);
 
-        //backpropagation
-        for (int i = errors.length - 1; i >= 0; i--)
+        // backpropagation
+        for(int i = errors.length - 1; i >= 0; i--)
         {
             changingWeightsAndBiases(i, errors[i], network[i + 1], network[i]);
         }
     }
 
-    public void train(double[] input, double[] expectedOutput)
+    public void train(float[] input, float[] expectedOutput)
     {
-        //checking if expected output length is greater than output size
-        if (expectedOutput.length > outputSize)
+        // checking if expected output length is greater than output size
+        if(expectedOutput.length > outputSize)
         {
             System.out.println("Error expected output is bigger than the output size");
             return;
         }
 
-        //checking if input length is greater than input size
-        if (expectedOutput.length > inputSize)
+        // checking if input length is greater than input size
+        if(expectedOutput.length > inputSize)
         {
             System.out.println("Error input is bigger than the input size");
             return;
@@ -242,63 +272,155 @@ public class NeuralNetwork
 
         this.expectedOutput = expectedOutput;
 
-        //pass input to input layer
-        network[0] = new Matrix(input);
+        // pass input to input layer
+        //network[0].fill(input);
 
-        //feedforward
-        for (int i = 1; i < network.length; i++)
+        // feedforward
+        for(int i = 1; i < network.length; i++)
         {
             preprocess(i, true);
         }
 
     }
 
-    //mutate weights by chance between 0 - 1
-    public NeuralNetwork mutateWeights(double chance)
+    // mutates weights and biases by chance between 0 - 1
+    public void mutate(float chance)
     {
-        NeuralNetwork neuralNetwork = clone();
-        for (int i = 0; i < neuralNetwork.weights.length; i++)
+        for(int i = 0; i < weights.length; i++)
         {
-            neuralNetwork.weights[i].mutate(chance);
+            weights[i].mutate(chance);
         }
-        return neuralNetwork;
+        for(int i = 0; i < biases.length; i++)
+        {
+            biases[i].mutate(chance);
+        }
     }
 
-    //mutate biases by chance between 0 - 1
-    public NeuralNetwork mutateBiases(double chance)
+    public void crossover(NeuralNetwork other)
     {
-        NeuralNetwork neuralNetwork = clone();
-        for (int i = 0; i < neuralNetwork.biases.length; i++)
+        for(int i = 0; i < weights.length; i++)
         {
-            neuralNetwork.biases[i].mutate(chance);
+
+            int crossPoint = (int) (Math.random() * weights[i].cols) - 1;
+
+            for(int j = 0; j < weights[i].rows; j++)
+            {
+                if(j < crossPoint)
+                {
+                    weights[i].array[j] = weights[i].array[j];
+                }
+                else
+                {
+                    weights[i].array[j] = other.weights[i].array[j];
+                }
+            }
         }
-        return neuralNetwork;
+
+        for(int i = 0; i < biases.length; i++)
+        {
+            int crossPoint = (int) (Math.random() * biases[i].cols) - 1;
+
+            for(int j = 0; j < biases[i].rows; j++)
+            {
+                if(j < crossPoint)
+                {
+                    biases[i].array[j] = biases[i].array[j];
+                }
+                else
+                {
+                    biases[i].array[j] = other.biases[i].array[j];
+                }
+            }
+        }
     }
 
-    //mutates weights and biases by chance between 0 - 1
-    public NeuralNetwork mutate(double chance)
+    public void save(String filename)
     {
-        NeuralNetwork neuralNetwork = clone();
-        for (int i = 0; i < neuralNetwork.weights.length; i++)
+        StringBuilder string = new StringBuilder("");
+
+        for(int i = 0; i < weights.length; i++)
         {
-            neuralNetwork.weights[i].mutate(chance);
+            string.append(weights[i]);
+
+            if(i != weights.length - 1)
+                string.append('\n');
         }
-        for (int i = 0; i < neuralNetwork.biases.length; i++)
+
+        string.append("\n\n");
+
+        for(int i = 0; i < biases.length; i++)
         {
-            neuralNetwork.biases[i].mutate(chance);
+            string.append(biases[i]);
+
+            if(i != biases.length - 1)
+                string.append('\n');
         }
-        return neuralNetwork;
+
+        try
+        {
+            FileWriter writer = new FileWriter(filename);
+            writer.write(string.toString());
+            writer.close();
+        }
+        catch(IOException e)
+        {
+            e.printStackTrace();
+        }
+
+        System.out.println("saved to " + filename);
     }
 
+    public static NeuralNetwork load(String filename)
+    {
+        String string;
+
+        try
+        {
+            string = new String(Files.readAllBytes(Paths.get(filename)));
+        }
+        catch(IOException e)
+        {
+            e.printStackTrace();
+            return null;
+        }
+
+        String[] elements = string.split("\n\n");
+        String[] weights = elements[0].split("\n");
+        String[] biasses = elements[1].split("\n");
+
+        Matrix[] weightsMatrix = new Matrix[weights.length];
+        Matrix[] biassesMatrix = new Matrix[weights.length];
+
+        for(int i = 0; i < weights.length; i++)
+        {
+            weightsMatrix[i] = Matrix.fromString(weights[i]);
+        }
+
+        for(int i = 0; i < biasses.length; i++)
+        {
+            biassesMatrix[i] = Matrix.fromString(biasses[i]);
+        }
+
+        NeuralNetwork result = new NeuralNetwork(weightsMatrix[0].cols, weightsMatrix[0].rows, weightsMatrix[weightsMatrix.length - 1].cols, weights.length - 1);
+
+        result.weights = weightsMatrix;
+        result.biases = biassesMatrix;
+
+        System.out.println("loaded from " + filename);
+
+        return result;
+    }
+
+    @Override
     public NeuralNetwork clone()
     {
-        NeuralNetwork clone = new NeuralNetwork(inputSize,hiddenLayerSize,outputSize,layerCount);
+        NeuralNetwork clone = new NeuralNetwork(inputSize, hiddenLayerSize, outputSize, hiddenLayerCount);
 
-        for (int i = 0; i < weights.length; i++)
+        for(int i = 0; i < weights.length; i++)
         {
             clone.weights[i] = weights[i].clone();
         }
-        for (int i = 0; i < biases.length; i++)
+        for(int i = 0; i < biases.length; i++)
         {
             clone.biases[i] = biases[i].clone();
         }

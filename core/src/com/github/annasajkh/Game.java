@@ -1,12 +1,12 @@
 package com.github.annasajkh;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -17,14 +17,16 @@ public class Game extends ApplicationAdapter
 {
 
     static ShapeRenderer shapeRenderer;
-    static float scale = 50;
+    static float scale = 150;
     static List<Snake> snakes;
     static List<Snake> snakeDies;
     static Random random = new Random();
     static int inputSize = 24;
     static int rows;
     static int collums;
-    static int populationSize = 2000;
+    static int populationSize = 1000;
+    static int bestSize = (int)(populationSize * 0.4f);
+
     static int index;
     static int generation = 0;
     static BitmapFont font;
@@ -32,46 +34,12 @@ public class Game extends ApplicationAdapter
     static Snake bestSnake;
     static boolean isRendering = false;
     static Line[] borders = new Line[4];
-    public static float maxVisionLength2;
-    public static float generationToRenderEach = 10;
+    public static float generationToRenderEach = 1;
+    public static int maxAttempts;
     
     public static void removeSnake(int index)
     {
         snakeDies.add(snakes.remove(index));
-    }
-
-
-    public static Color hsvToRgba(float hue, float saturation, float value, float alpha)
-    {
-
-        int h = (int) (hue * 6);
-        float f = hue * 6 - h;
-        float p = value * (1 - saturation);
-        float q = value * (1 - f * saturation);
-        float t = value * (1 - (1 - f) * saturation);
-
-        switch (h)
-        {
-            case 0:
-                return new Color(value, t, p, alpha);
-            case 1:
-                return new Color(q, value, p, alpha);
-            case 2:
-                return new Color(p, value, t, alpha);
-            case 3:
-                return new Color(p, q, value, alpha);
-            case 4:
-                return new Color(t, p, value, alpha);
-            case 5:
-                return new Color(value, p, q, alpha);
-            default:
-                throw new RuntimeException("Something went wrong when converting from HSV to RGB. Input was " +
-                                           hue +
-                                           ", " +
-                                           saturation +
-                                           ", " +
-                                           value);
-        }
     }
 
     @Override
@@ -82,6 +50,7 @@ public class Game extends ApplicationAdapter
 
         rows = (int) (Gdx.graphics.getHeight() / scale);
         collums = (int) (Gdx.graphics.getWidth() / scale);
+        maxAttempts =  Game.rows * Game.collums;
 
 
         borders[0] = new Line(new Vector2(0, 0), new Vector2(0, Gdx.graphics.getHeight()));
@@ -103,8 +72,6 @@ public class Game extends ApplicationAdapter
         {
             snakes.add(new Snake());
         }
-        
-        maxVisionLength2 = Gdx.graphics.getWidth() * Gdx.graphics.getWidth() + Gdx.graphics.getHeight() * Gdx.graphics.getHeight();
     }
 
     @Override
@@ -138,51 +105,51 @@ public class Game extends ApplicationAdapter
                 spriteBatch.begin();
                 font.draw(spriteBatch, "generation : " + generation, 10, 20);
                 spriteBatch.end();
+                try
+                {
+                    Thread.sleep(100);
+                }
+                catch(InterruptedException e)
+                {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
 
             }
             else
             {
-                Snake[] bestSnakes = new Snake[populationSize / 2];
-                for (int i = 0; i < bestSnakes.length; i++)
+                
+                Collections.sort(snakeDies);
+                
+                Random random = new Random();
+                
+                List<Snake> bestSnakes = snakeDies.subList(snakeDies.size() - bestSize,snakeDies.size());
+                List<Snake> bestSnakesBreedAndMutates = new ArrayList<>(bestSnakes);
+
+                for(Snake bestSnakesBreedAndMutate : bestSnakesBreedAndMutates)
                 {
-                    bestSnake = snakeDies.get(0);
-                    for (Snake snake : snakeDies)
-                    {
-                        if (snake.score > bestSnake.score)
-                        {
-                            bestSnake = snake;
-                        }
-                    }
-                    bestSnakes[i] = new Snake(bestSnake.brain.clone());
-                    snakeDies.remove(bestSnake);
+                    Snake otherSnakes = bestSnakesBreedAndMutates.get(random.nextInt(bestSnakesBreedAndMutates.size()));
+                    
+                    bestSnakesBreedAndMutate.brain.crossover(otherSnakes.brain);
+                    bestSnakesBreedAndMutate.brain.mutate(0.1f);
                 }
-                snakes = new ArrayList<>(populationSize);
+                
+                bestSnakes.addAll(bestSnakesBreedAndMutates);
+                
+                for(int i = 0; i < bestSize / 2; i++)
+                {
+                    bestSnakes.add(new Snake());
+                }
+                
+                
+                for(Snake snake : bestSnakes)
+                {
+                    snakes.add(new Snake(snake.brain.clone()));
+                }
+                
+                snakeDies.clear();
+                
                 generation++;
-
-                for (int i = 0; i < populationSize / 2; i++)
-                {
-                    if (bestSnakes[i].score > 0)
-                    {
-                        snakes.add(new Snake(bestSnakes[i].brain.clone()
-                                                                .mutate(0.5)));
-                    }
-                    else
-                    {
-                        snakes.add(new Snake());
-                    }
-                }
-
-                for (int i = 0; i < populationSize / 2; i++)
-                {
-                    if (bestSnakes[i].score > 0)
-                    {
-                        snakes.add(bestSnakes[i]);
-                    }
-                    else
-                    {
-                        snakes.add(new Snake());
-                    }
-                }
                 isRendering = false;
                 snakeDies.clear();
             }

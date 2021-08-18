@@ -45,11 +45,11 @@ public class Food
     public void update()
     {
 
-        if (snake.position.equals(getPosition()))
+        if (snake.position.equals(position))
         {
             snake.attempt = 0;
-            snake.score++;
-            snake.tails.add(new Tail(new Vector2(0, -1000), snake.colorHue, snake.forward));
+            snake.score += 1000;
+            snake.tails.add(new Tail(new Vector2(0, -1000)));
             position = new Vector2(Game.random.nextInt(Game.collums) * Game.scale, Game.random.nextInt(Game.rows) *
                                                                                    Game.scale);
             borders[0] = new Line(new Vector2(position.x, position.y), new Vector2(position.x, position.y +
@@ -83,11 +83,6 @@ public class Food
                 }
             }
         }
-    }
-
-    public Vector2 getPosition()
-    {
-        return new Vector2(position);
     }
 
     public float getX()

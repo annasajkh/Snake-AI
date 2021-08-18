@@ -1,11 +1,8 @@
 package com.github.annasajkh;
 
-import java.util.Arrays;
-
-
 public class Matrix
 {
-    double[][] array;
+    float[][] array;
     int rows;
     int cols;
 
@@ -14,46 +11,60 @@ public class Matrix
         this.rows = rows;
         this.cols = cols;
 
-        array = new double[rows][cols];
-        for (int i = 0; i < rows; i++)
-        {
-            for (int j = 0; j < cols; j++)
-            {
-                array[i][j] = 0;
-            }
-        }
+        array = new float[rows][cols];
     }
 
-    public Matrix(double[] arr)
+    public Matrix(float[] arr)
     {
         this.rows = arr.length;
         this.cols = 1;
 
-        array = new double[this.rows][this.cols];
-        for (int i = 0; i < this.rows; i++)
+        array = new float[this.rows][this.cols];
+        for(int i = 0; i < this.rows; i++)
         {
             array[i][0] = arr[i];
         }
 
     }
 
+    public void fill(Float[] arr)
+    {
+
+        for(int i = 0; i < this.rows; i++)
+        {
+            array[i][0] = arr[i];
+        }
+    }
 
     public void randomize()
     {
-        for (int i = 0; i < rows; i++)
+
+        for(int i = 0; i < rows; i++)
         {
-            for (int j = 0; j < cols; j++)
+            for(int j = 0; j < cols; j++)
             {
-                array[i][j] = Math.random() * 2 - 1;
+                array[i][j] = (float)(Math.random() * 4 - 2);
+            }
+        }
+    }
+    
+    public void set(float number)
+    {
+
+        for(int i = 0; i < rows; i++)
+        {
+            for(int j = 0; j < cols; j++)
+            {
+                array[i][j] = number;
             }
         }
     }
 
-    public void scale(double scalar)
+    public void scale(float scalar)
     {
-        for (int i = 0; i < rows; i++)
+        for(int i = 0; i < rows; i++)
         {
-            for (int j = 0; j < cols; j++)
+            for(int j = 0; j < cols; j++)
             {
                 array[i][j] *= scalar;
             }
@@ -62,33 +73,33 @@ public class Matrix
 
     public void scale(Matrix matrix)
     {
-        for (int i = 0; i < matrix.rows; i++)
+        for(int i = 0; i < matrix.rows; i++)
         {
-            for (int j = 0; j < matrix.cols; j++)
+            for(int j = 0; j < matrix.cols; j++)
             {
                 array[i][j] *= matrix.array[i][j];
             }
         }
     }
 
-    public void mutate(double chance)
+    public void mutate(float chance)
     {
-        for (int i = 0; i < rows; i++)
+        for(int i = 0; i < rows; i++)
         {
-            for (int j = 0; j < cols; j++)
+            for(int j = 0; j < cols; j++)
             {
-                array[i][j] += Math.random() <= chance ? Math.random() * 2 - 1: 0;
+                array[i][j] += Math.random() <= chance ? Math.random() * 2 - 1 : 0;
             }
         }
     }
 
-    public double[] toArray()
+    public float[] toArray()
     {
-        double[] result = new double[rows * cols];
+        float[] result = new float[rows * cols];
         int index = 0;
-        for (int i = 0; i < rows; i++)
+        for(int i = 0; i < rows; i++)
         {
-            for (int j = 0; j < cols; j++)
+            for(int j = 0; j < cols; j++)
             {
                 result[index] = array[i][j];
                 index++;
@@ -100,9 +111,9 @@ public class Matrix
     public static Matrix transpose(Matrix matrix)
     {
         Matrix result = new Matrix(matrix.cols, matrix.rows);
-        for (int i = 0; i < matrix.rows; i++)
+        for(int i = 0; i < matrix.rows; i++)
         {
-            for (int j = 0; j < matrix.cols; j++)
+            for(int j = 0; j < matrix.cols; j++)
             {
                 result.array[j][i] = matrix.array[i][j];
             }
@@ -113,18 +124,19 @@ public class Matrix
 
     public static Matrix multiply(Matrix a, Matrix b)
     {
-        if (a.cols != b.rows)
+        if(a.cols != b.rows)
         {
             System.out.println("columns has match to rows");
             return null;
         }
+
         Matrix result = new Matrix(a.rows, b.cols);
-        for (int i = 0; i < result.rows; i++)
+        for(int i = 0; i < result.rows; i++)
         {
-            for (int j = 0; j < result.cols; j++)
+            for(int j = 0; j < result.cols; j++)
             {
-                double sum = 0;
-                for (int k = 0; k < a.cols; k++)
+                float sum = 0;
+                for(int k = 0; k < a.cols; k++)
                 {
                     sum += a.array[i][k] * b.array[k][j];
                 }
@@ -134,12 +146,11 @@ public class Matrix
         return result;
     }
 
-
     public void add(Matrix matrix)
     {
-        for (int i = 0; i < matrix.rows; i++)
+        for(int i = 0; i < matrix.rows; i++)
         {
-            for (int j = 0; j < matrix.cols; j++)
+            for(int j = 0; j < matrix.cols; j++)
             {
                 array[i][j] += matrix.array[i][j];
             }
@@ -148,32 +159,33 @@ public class Matrix
 
     public void sub(Matrix matrix)
     {
-        for (int i = 0; i < matrix.rows; i++)
+        for(int i = 0; i < matrix.rows; i++)
         {
-            for (int j = 0; j < matrix.cols; j++)
+            for(int j = 0; j < matrix.cols; j++)
             {
                 array[i][j] -= matrix.array[i][j];
             }
         }
     }
 
-    public void add(double scalar)
+    public void add(float scalar)
     {
-        for (int i = 0; i < rows; i++)
+        for(int i = 0; i < rows; i++)
         {
-            for (int j = 0; j < cols; j++)
+            for(int j = 0; j < cols; j++)
             {
                 array[i][j] += scalar;
             }
         }
     }
 
+    @Override
     public Matrix clone()
     {
-        Matrix matrix = new Matrix(this.rows,this.cols);
-        for (int i = 0; i < matrix.rows; i++)
+        Matrix matrix = new Matrix(this.rows, this.cols);
+        for(int i = 0; i < matrix.rows; i++)
         {
-            for (int j = 0; j < matrix.cols; j++)
+            for(int j = 0; j < matrix.cols; j++)
             {
                 matrix.array[i][j] = array[i][j];
             }
@@ -181,10 +193,43 @@ public class Matrix
         return matrix;
     }
 
+    public static Matrix fromString(String string)
+    {
+        String[] rows = string.split("#");
+
+        Matrix result = new Matrix(rows.length, rows[0].split(",").length);
+
+        for(int i = 0; i < rows.length; i++)
+        {
+            String[] cols = rows[i].split(",");
+
+            for(int j = 0; j < cols.length; j++)
+            {
+                result.array[i][j] = Float.parseFloat(cols[j]);
+            }
+        }
+
+        return result;
+    }
 
     @Override
     public String toString()
     {
-        return Arrays.deepToString(array);
+        StringBuilder string = new StringBuilder();
+        for(int j = 0; j < rows; j++)
+        {
+            for(int k = 0; k < cols; k++)
+            {
+                string.append(array[j][k]);
+
+                if(k != cols - 1)
+                    string.append(",");
+
+            }
+
+            if(j != rows - 1)
+                string.append("#");
+        }
+        return string.toString();
     }
 }
