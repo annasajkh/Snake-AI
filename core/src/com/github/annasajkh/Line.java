@@ -6,6 +6,7 @@ public class Line
 {
     Vector2 pointA;
     Vector2 pointB;
+    float collisionType = 0;
 
     public Line(Vector2 pointA, Vector2 pointB)
     {

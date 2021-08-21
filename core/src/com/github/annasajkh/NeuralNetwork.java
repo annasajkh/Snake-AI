@@ -366,8 +366,6 @@ public class NeuralNetwork
         {
             e.printStackTrace();
         }
-
-        System.out.println("saved to " + filename);
     }
 
     public static NeuralNetwork load(String filename)

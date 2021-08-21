@@ -12,18 +12,18 @@ public class Snake implements Comparable<Snake>
 {
     double score = 0;
     int attempt = 0;
-    boolean die = false;
-    Line[] visions = new Line[8];
+    boolean dead = false;
+    Line[] visions = new Line[Game.visionLength];
     Vector2 position;
     Vector2 dir;
     List<Tail> tails;
-    Color color;
+    Color color = Color.BLUE;
     NeuralNetwork brain;
     Food food;
 
     public Snake()
     {
-        this(new NeuralNetwork(Game.inputSize, 12, 4, 1));
+        this(new NeuralNetwork(Game.inputSize, 8, 4, 1));
     }
 
     public Snake(NeuralNetwork brain)
@@ -32,180 +32,188 @@ public class Snake implements Comparable<Snake>
         this.brain = brain;
         tails = new ArrayList<>();
         tails.add(new Tail(position));
-        color = Color.RED;
         dir = new Vector2(Game.scale, 0);
         food = new Food(this);
 
     }
-    
-    public void setBorderPos(Line line,float Ax, float Ay, float Bx, float By)
+
+    public void setBorderPos(Line line, float Ax, float Ay, float Bx, float By)
     {
 
-    	line.pointA.x = Ax;
-    	line.pointA.y =	Ay;
-    	line.pointB.x = Bx;
-    	line.pointB.y = By;
+        line.pointA.x = Ax;
+        line.pointA.y = Ay;
+        line.pointB.x = Bx;
+        line.pointB.y = By;
     }
 
-    public void update()
+    public void checkIfDead()
     {
-
-        food.update();
-        for (int i = tails.size() - 1; i > 0; i--)
+        for(int j = 0; j < tails.size(); j++)
         {
-            tails.get(i).position.x = tails.get(i - 1)
-                                           .getX();
-            tails.get(i).position.y = tails.get(i - 1)
-                                           .getY();
+            if(tails.get(j).position.equals(position))
+            {
+                dead = true;
+                return;
+            }
         }
 
-        tails.get(0).position = position.cpy();
-        position.add(dir);
-
-        for (Tail tail : tails)
-        { 
-        	setBorderPos(tail.borders[0],tail.position.x,tail.position.y,tail.position.x,tail.position.y + Game.scale);
-        	setBorderPos(tail.borders[1],tail.position.x, tail.position.y,tail.position.x +Game.scale, tail.position.y);
-        	setBorderPos(tail.borders[2],tail.position.x, tail.position.y + Game.scale
-        								,tail.position.x + Game.scale, tail.position.y + Game.scale);
-        	setBorderPos(tail.borders[3],tail.position.x + Game.scale, tail.position.y
-        								,tail.position.x +Game.scale, tail.position.y + Game.scale);
+        if(position.x >= Gdx.graphics.getWidth())
+        {
+            dead = true;
+            return;
+        }
+        else if(position.x < 0)
+        {
+            dead = true;
+            return;
+        }
+        else if(position.y >= Gdx.graphics.getHeight())
+        {
+            dead = true;
+            return;
+        }
+        else if(position.y < 0)
+        {
+            dead = true;
+            return;
         }
 
+        if(attempt >= Game.maxAttempts)
+        {
+            dead = true;
+            score -= 1000;
+            return;
+        }
+    }
+
+    public void move(List<Float> input)
+    {
+        float[] result = brain.process(input.toArray(new Float[0]));
+
+        if(result[0] > 0.5f)
+        {
+            right();
+        }
+        else if(result[1] > 0.5f)
+        {
+            left();
+        }
+        else if(result[2] > 0.5f)
+        {
+            up();
+        }
+        else if(result[3] > 0.5f)
+        {
+            down();
+        }
+    }
+
+    public List<Float> getInput()
+    {
         List<Float> input = new ArrayList<>(Game.inputSize);
 
-        for (int i = 0; i < visions.length; i++)
+        for(int i = 0; i < visions.length; i++)
         {
             visions[i] = new Line(position.cpy().add(Game.scale * 0.5f, Game.scale * 0.5f),
-            						position.cpy().add(Game.scale * 0.5f, Game.scale * 0.5f)
-            							.add(new Vector2(1,0).rotateDeg(i * 45).scl(2000)));
+                position.cpy().add(Game.scale * 0.5f, Game.scale * 0.5f).add(new Vector2(1, 0).rotateDeg(i * (360 / visions.length)).scl(2000)));
 
-            for (int j = 0; j < 4; j++)
+            for(int j = 0; j < tails.size(); j++)
             {
-                Vector2 collisionPoint = Game.borders[j].collide(visions[i]);
-                if (collisionPoint != null)
-                {
-                    visions[i].pointB = collisionPoint;
-                }
-            }
-            if(visions[i].pointB != null)
-            {
-                input.add(visions[i].length() * 0.0001f);
-            }
-            else
-            {
-                input.add(1f);
-            }
-
-
-            for (int j = 0; j < 4; j++)
-            {
-                Vector2 collisionPoint = food.borders[j].collide(visions[i]);
-                if (collisionPoint != null)
-                {
-                    visions[i].pointB = collisionPoint;
-                }
-            }
-
-            if(visions[i].pointB != null)
-            {
-                input.add(visions[i].length() * 0.0001f);
-            }
-            else
-            {
-                input.add(0.5f);
-            }
-
-            for (int j = 0; j < tails.size(); j++)
-            {
-                for (int k = 0; k < 4; k++)
+                for(int k = 0; k < 4; k++)
                 {
                     Vector2 collisionPoint = tails.get(j).borders[k].collide(visions[i]);
-                    if (collisionPoint != null)
+                    if(collisionPoint != null)
                     {
                         visions[i].pointB = collisionPoint;
+                        visions[i].collisionType = 0;
                     }
                 }
             }
 
-            if(visions[i].pointB != null)
+            for(int j = 0; j < 4; j++)
             {
-                input.add(visions[i].length() * 0.0001f);
+                Vector2 collisionPoint = food.borders[j].collide(visions[i]);
+                if(collisionPoint != null)
+                {
+                    visions[i].pointB = collisionPoint;
+                    visions[i].collisionType = 1;
+                }
             }
-            else
+
+            for(int j = 0; j < 4; j++)
             {
-                input.add(1f);
+                Vector2 collisionPoint = Game.borders[j].collide(visions[i]);
+                if(collisionPoint != null)
+                {
+                    visions[i].pointB = collisionPoint;
+                    visions[i].collisionType = 0;
+                }
             }
+
+            input.add(visions[i].length() / Game.maxLength);
+            input.add(visions[i].collisionType);
         }
 
+        input.add(dir.x > 0 ? 1f : 0f);
+        input.add(dir.x > 0 ? 0f : 1f);
+        input.add(dir.y > 0 ? 1f : 0f);
+        input.add(dir.y > 0 ? 0f : 1f);
 
-        for (int j = 0; j < tails.size(); j++)
+        return input;
+    }
+
+    public void update()
+    {
+        Vector2 tailDir = new Vector2();
+
+        for(int i = tails.size() - 1; i > 0; i--)
         {
-            if (tails.get(j).position.equals(position))
+            if(i == tails.size() - 1)
             {
-                die = true;
-                return;
+                tailDir.x = (tails.get(i).position.x - tails.get(i - 1).getX() + Game.scale) / (Game.scale * 2);
+                tailDir.y = (tails.get(i).position.y - tails.get(i - 1).getY() + Game.scale) / (Game.scale * 2);
             }
+            tails.get(i).position.x = tails.get(i - 1).getX();
+            tails.get(i).position.y = tails.get(i - 1).getY();
         }
+
+        tails.get(0).position = position.cpy();
+        position.add(dir);
+        
         
 
-        if (position.x >= Gdx.graphics.getWidth())
+        for(Tail tail : tails)
         {
-            die = true;
-            score -= 1000;
-            return;
+            setBorderPos(tail.borders[0], tail.position.x, tail.position.y, tail.position.x, tail.position.y + Game.scale);
+            setBorderPos(tail.borders[1], tail.position.x, tail.position.y, tail.position.x + Game.scale, tail.position.y);
+            setBorderPos(tail.borders[2], tail.position.x, tail.position.y + Game.scale, tail.position.x + Game.scale, tail.position.y + Game.scale);
+            setBorderPos(tail.borders[3], tail.position.x + Game.scale, tail.position.y, tail.position.x + Game.scale, tail.position.y + Game.scale);
         }
-        else if (position.x < 0)
+
+        checkIfDead();
+
+        if(dead)
         {
-            die = true;
-            score -= 1000;
-            return;
-        }
-        else if (position.y >= Gdx.graphics.getHeight())
-        {
-            die = true;
-            score -= 1000;
-            return;
-        }
-        else if (position.y < 0)
-        {
-            die = true;
-            score -= 1000;
+            score -= Math.pow((1 - attempt / Game.maxAttempts) * 10, 5);
             return;
         }
 
-        if (attempt >= Game.maxAttempts)
-        {
-            die = true;
-            return;
-        }
+        List<Float> input = getInput();
+        input.add(tailDir.x == 0.5f ? 1f : 0f);
+        input.add(tailDir.x == 0.5f ? 0f : 1f);
+        input.add(tailDir.y == 0.5f ? 1f : 0f);
+        input.add(tailDir.y == 0.5f ? 0f : 1f);
 
+        move(input);
 
-        float[] result = brain.process(input.toArray(new Float[0]));
+        food.update();
 
-        if (result[0] > 0.5f)
-        {
-            right();
-        }
-        else if (result[1] > 0.5f)
-        {
-            left();
-        }
-        else if (result[2] > 0.5f)
-        {
-            up();
-        }
-        else if (result[3] > 0.5f)
-        {
-            down();
-        }
         attempt++;
-        score += 1;
     }
 
     public void right()
     {
-        if (dir.x != 0)
+        if(dir.x != 0)
         {
             return;
         }
@@ -215,7 +223,7 @@ public class Snake implements Comparable<Snake>
 
     public void left()
     {
-        if (dir.x != 0)
+        if(dir.x != 0)
         {
             return;
         }
@@ -225,7 +233,7 @@ public class Snake implements Comparable<Snake>
 
     public void up()
     {
-        if (dir.y != 0)
+        if(dir.y != 0)
         {
             return;
         }
@@ -235,7 +243,7 @@ public class Snake implements Comparable<Snake>
 
     public void down()
     {
-        if (dir.y != 0)
+        if(dir.y != 0)
         {
             return;
         }
@@ -245,21 +253,23 @@ public class Snake implements Comparable<Snake>
 
     public void render(ShapeRenderer shapeRenderer)
     {
+        for(int i = 0; i < visions.length; i++)
+        {
+            shapeRenderer.setColor(Color.GREEN);
+            shapeRenderer.rectLine(visions[i].pointA, visions[i].pointB, 3);
+        }
+
         shapeRenderer.setColor(color);
-        for (Tail tail : tails)
+        for(Tail tail : tails)
         {
             shapeRenderer.rect(tail.position.x, tail.position.y, Game.scale, Game.scale);
         }
-        shapeRenderer.setColor(Color.WHITE);
-        shapeRenderer.rect(food.position.x, food.position.y, Game.scale, Game.scale);
+
+        food.draw(shapeRenderer);
+
         shapeRenderer.setColor(color);
         shapeRenderer.rect(position.x, position.y, Game.scale, Game.scale);
 
-        for (int i = 0; i < visions.length; i++)
-        {
-            shapeRenderer.setColor(Color.GREEN);
-            shapeRenderer.rectLine(visions[i].pointA, visions[i].pointB,5);
-        }
     }
 
     public float getX()

@@ -9,8 +9,8 @@ public class DesktopLauncher
     public static void main(String[] args)
     {
         LwjglApplicationConfiguration config = new LwjglApplicationConfiguration();
-        config.width = 1050;
-        config.height = 600;
+        config.width = 500;
+        config.height = 500;
         config.resizable = false;
         config.title = "Snake AI";
         new LwjglApplication(new Game(), config);

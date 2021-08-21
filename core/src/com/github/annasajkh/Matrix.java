@@ -88,7 +88,7 @@ public class Matrix
         {
             for(int j = 0; j < cols; j++)
             {
-                array[i][j] += Math.random() <= chance ? Math.random() * 2 - 1 : 0;
+                array[i][j] = Math.random() <= chance ? (float)(Math.random() * 4 - 2) : array[i][j];
             }
         }
     }
